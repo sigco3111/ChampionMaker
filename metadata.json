@@ -1,0 +1,6 @@
+{
+  "name": "챔피언 메이커 (Champion Maker)",
+  "description": "텍스트와 차트 기반으로 복싱 선수를 육성하여 챔피언으로 만드는 한글 시뮬레이션 게임입니다. 훈련하고, 경기에 참여하여 최고의 자리에 오르세요.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
