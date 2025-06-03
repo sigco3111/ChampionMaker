@@ -1,4 +1,5 @@
-import { PlayerStats, TrainingOption, TrainingType, Opponent, Sponsorship, GameNewsEvent, TrainingCamp } from './types';
+
+import { PlayerStats, TrainingOption, TrainingType, Opponent, Sponsorship, GameNewsEvent } from './types';
 
 export const INITIAL_PLAYER_STATS: PlayerStats = {
   playerName: "유밥", // Default player name changed
@@ -22,9 +23,9 @@ export const INITIAL_PLAYER_STATS: PlayerStats = {
 export const MAX_STAT_VALUE = 100;
 export const MAX_HEALTH = 100;
 
-export const REPUTATION_GAIN_WIN_DEFAULT = 10;
+export const REPUTATION_GAIN_WIN_DEFAULT = 8; // Reduced from 10
 export const REPUTATION_GAIN_WIN_RANK_BONUS = 5; 
-export const REPUTATION_LOSS_DEFAULT = 5;
+export const REPUTATION_LOSS_DEFAULT = 7; // Increased from 5
 
 
 export const TRAINING_OPTIONS: TrainingOption[] = [
@@ -32,45 +33,93 @@ export const TRAINING_OPTIONS: TrainingOption[] = [
     id: TrainingType.SANDBAG,
     name: "샌드백 훈련",
     description: "펀치력과 기술을 연마합니다.",
-    effects: { strength: 2, technique: 1 },
-    staminaCost: 10,
+    effects: { strength: 1, technique: 1 }, // Strength 2->1
+    staminaCost: 12, // Increased from 10
     duration: 1,
   },
   {
     id: TrainingType.ROADWORK,
     name: "로드워크",
     description: "지구력과 스피드를 향상시킵니다.",
-    effects: { stamina: 3, speed: 1 }, 
-    staminaCost: 15,
+    effects: { stamina: 2, speed: 1 },  // Stamina 3->2
+    staminaCost: 18, // Increased from 15
     duration: 1,
   },
   {
     id: TrainingType.SPARRING,
     name: "스파링",
     description: "실전 감각을 익히고 모든 능력치를 단련합니다. 부상 위험이 다소 높습니다.",
-    effects: { strength: 1, speed: 1, technique: 2, healthChange: -10 }, 
-    staminaCost: 20,
+    effects: { strength: 1, speed: 1, technique: 1, healthChange: -12 }, // Technique 2->1, HealthChange -10 -> -12
+    staminaCost: 22, // Increased from 20
     duration: 1,
   },
   {
     id: TrainingType.WEIGHT_LIFTING,
     name: "웨이트 트레이닝",
     description: "근력을 집중적으로 강화합니다.",
-    effects: { strength: 3 },
-    staminaCost: 15,
+    effects: { strength: 2 }, // Strength 3->2
+    staminaCost: 18, // Increased from 15
     duration: 1,
   },
   {
     id: TrainingType.REST,
     name: "휴식 및 회복",
     description: "체력과 건강을 효과적으로 회복합니다.",
-    effects: { healthChange: 30, staminaChange: 35 }, 
+    effects: { healthChange: 25, staminaChange: 30 }, // Health 30->25, Stamina 35->30
     staminaCost: 0,
     duration: 1,
   },
 ];
 
-export const OPPONENTS: Opponent[] = [
+const applyOpponentDifficultyScaling = (opponents: Opponent[]): Opponent[] => {
+  const baseMultipliers = {
+    strength: 1.15,
+    speed: 1.15,
+    technique: 1.15,
+    stamina: 1.10,
+    health: 1.10,
+  };
+
+  const getTierMultipliers = (rank?: string) => {
+    let str_add = 1.0, spd_add = 1.0, tech_add = 1.0, sta_add = 1.0, health_add = 1.0;
+    switch (rank) {
+      case "챔피언":
+        str_add = 1.20; spd_add = 1.20; tech_add = 1.20; sta_add = 1.15; health_add = 1.15; break;
+      case "랭커":
+        str_add = 1.15; spd_add = 1.15; tech_add = 1.15; sta_add = 1.10; health_add = 1.10; break;
+      case "프로":
+        str_add = 1.10; spd_add = 1.10; tech_add = 1.10; sta_add = 1.05; health_add = 1.05; break;
+      case "유망주":
+        str_add = 1.05; spd_add = 1.05; tech_add = 1.05; break;
+      default: // 신인
+        break;
+    }
+    return {
+      strength: baseMultipliers.strength * str_add,
+      speed: baseMultipliers.speed * spd_add,
+      technique: baseMultipliers.technique * tech_add,
+      stamina: baseMultipliers.stamina * sta_add,
+      health: baseMultipliers.health * health_add,
+    };
+  };
+
+  return opponents.map(op => {
+    const tierMults = getTierMultipliers(op.rankRequired);
+    return {
+      ...op,
+      stats: {
+        strength: Math.round(op.stats.strength * tierMults.strength),
+        speed: Math.round(op.stats.speed * tierMults.speed),
+        stamina: Math.round(op.stats.stamina * tierMults.stamina),
+        technique: Math.round(op.stats.technique * tierMults.technique),
+        health: Math.round(op.stats.health * tierMults.health),
+      }
+    };
+  });
+};
+
+
+const BASE_OPPONENTS: Opponent[] = [
   {
     id: "rookie_1",
     name: "풋내기 복서",
@@ -134,7 +183,7 @@ export const OPPONENTS: Opponent[] = [
     description: "왕년의 챔피언. 녹슬지 않은 실력을 보여줄 것입니다. 전설에게 도전하세요!",
     rankRequired: "랭커", 
   },
-  { // Adding a final boss type opponent
+  { 
     id: "world_champion_1",
     name: "세계 챔피언",
     stats: { strength: 55, speed: 50, stamina: 90, technique: 50, health: 100 },
@@ -143,13 +192,15 @@ export const OPPONENTS: Opponent[] = [
   }
 ];
 
+export const OPPONENTS: Opponent[] = applyOpponentDifficultyScaling(BASE_OPPONENTS);
+
 export const RANKS = ["신인", "유망주", "프로", "랭커", "챔피언"];
 
 export const RANK_UP_WINS = {
-  "신인": 2, 
-  "유망주": 3, 
-  "프로": 4, 
-  "랭커": 5, 
+  "신인": 3,      // Increased from 2
+  "유망주": 4,  // Increased from 3
+  "프로": 6,    // Increased from 4
+  "랭커": 7,    // Increased from 5
 };
 
 export const AVAILABLE_SPONSORSHIPS: Sponsorship[] = [
@@ -159,7 +210,7 @@ export const AVAILABLE_SPONSORSHIPS: Sponsorship[] = [
     description: "지역 체육관에서 소정의 훈련 지원금을 지급합니다.",
     reputationRequired: 20,
     benefitType: 'weekly',
-    amount: 50, // 주간 $50
+    amount: 40, // 주간 $50 -> $40
     durationWeeks: 10,
   },
   {
@@ -168,7 +219,7 @@ export const AVAILABLE_SPONSORSHIPS: Sponsorship[] = [
     description: "새로 출시된 에너지 드링크의 홍보 모델이 되어 일회성 광고료를 받습니다.",
     reputationRequired: 75,
     benefitType: 'one_time',
-    amount: 250, // 일회성 $250
+    amount: 200, // 일회성 $250 -> $200
   },
   {
     id: "sports_gear_basic",
@@ -176,7 +227,7 @@ export const AVAILABLE_SPONSORSHIPS: Sponsorship[] = [
     description: "스포츠 용품 회사와 기본 모델 계약을 체결합니다.",
     reputationRequired: 150,
     benefitType: 'weekly',
-    amount: 120, // 주간 $120
+    amount: 100, // 주간 $120 -> $100
     durationWeeks: 8,
   },
   {
@@ -185,7 +236,7 @@ export const AVAILABLE_SPONSORSHIPS: Sponsorship[] = [
     description: "지역 복싱 토너먼트의 공식 스폰서 중 하나로 선정되어 후원금을 받습니다.",
     reputationRequired: 300,
     benefitType: 'one_time',
-    amount: 700, // 일회성 $700
+    amount: 550, // 일회성 $700 -> $550
   },
   {
     id: "national_brand_ambassador",
@@ -193,7 +244,7 @@ export const AVAILABLE_SPONSORSHIPS: Sponsorship[] = [
     description: "유명 스포츠 브랜드의 홍보대사가 되어 정기적인 지원을 받습니다.",
     reputationRequired: 600,
     benefitType: 'weekly',
-    amount: 300, // 주간 $300
+    amount: 240, // 주간 $300 -> $240
     durationWeeks: 12,
   },
   {
@@ -202,7 +253,7 @@ export const AVAILABLE_SPONSORSHIPS: Sponsorship[] = [
     description: "세계적인 기업과의 대형 파트너십 계약으로 막대한 부를 얻습니다.",
     reputationRequired: 1200,
     benefitType: 'one_time',
-    amount: 2500, // 일회성 $2500
+    amount: 2000, // 일회성 $2500 -> $2000
   }
 ];
 
@@ -215,24 +266,24 @@ export const GAME_NEWS_EVENTS: GameNewsEvent[] = [
   {
     id: "news_funds_loss_01",
     message: "물가가 약간 상승했습니다. 생활비로 자금이 소모됩니다.",
-    effects: [{ type: 'funds', value: -10, message: "자금 $10 감소" }],
-    condition: (stats) => stats.funds > 20,
+    effects: [{ type: 'funds', value: -15, message: "자금 $15 감소" }], // Increased loss
+    condition: (stats) => stats.funds > 30,
   },
   {
     id: "news_reputation_gain_01",
     message: "최근 당신의 경기가 지역 신문에 긍정적으로 실렸습니다!",
-    effects: [{ type: 'reputation', value: 5, message: "평판 +5" }],
+    effects: [{ type: 'reputation', value: 4, message: "평판 +4" }], // Reduced gain
   },
   {
     id: "news_health_loss_01",
     message: "가벼운 감기 기운이 느껴집니다. 컨디션 관리에 유의하세요.",
-    effects: [{ type: 'currentHealth', value: -5, message: "현재 건강 -5" }],
-    condition: (stats) => stats.currentHealth > 20,
+    effects: [{ type: 'currentHealth', value: -7, message: "현재 건강 -7" }], // Increased loss
+    condition: (stats) => stats.currentHealth > 25,
   },
   {
     id: "news_stamina_gain_01",
     message: "오늘따라 몸이 가볍습니다! 컨디션 최상!",
-    effects: [{ type: 'currentStamina', value: 10, message: "현재 스태미나 +10" }],
+    effects: [{ type: 'currentStamina', value: 8, message: "현재 스태미나 +8" }], // Reduced gain
   },
   {
     id: "news_training_boost_01",
@@ -247,7 +298,7 @@ export const GAME_NEWS_EVENTS: GameNewsEvent[] = [
   {
     id: "news_funds_gain_small_01",
     message: "길에서 우연히 소액의 돈을 주웠습니다!",
-    effects: [{ type: 'funds', value: 20, message: "자금 $20 증가" }],
+    effects: [{ type: 'funds', value: 15, message: "자금 $15 증가" }], // Reduced gain
   },
   {
     id: "news_opponent_rumor_01",
@@ -258,68 +309,21 @@ export const GAME_NEWS_EVENTS: GameNewsEvent[] = [
    {
     id: "news_minor_injury_recovery",
     message: "지난 번 가벼운 부상이 생각보다 빨리 회복되었습니다.",
-    effects: [{ type: 'currentHealth', value: 3, message: "현재 건강 +3"}],
+    effects: [{ type: 'currentHealth', value: 2, message: "현재 건강 +2"}], // Reduced gain
     condition: (stats) => stats.currentHealth < stats.health && stats.currentHealth > 10,
   },
   {
     id: "news_unexpected_expense_01",
     message: "예상치 못한 장비 수리 비용이 발생했습니다.",
-    effects: [{ type: 'funds', value: -15, message: "자금 $15 감소"}],
-    condition: (stats) => stats.funds > 30,
+    effects: [{ type: 'funds', value: -20, message: "자금 $20 감소"}], // Increased loss
+    condition: (stats) => stats.funds > 40,
   },
   {
     id: "news_fan_gift_01",
     message: "익명의 팬으로부터 작은 격려 선물이 도착했습니다!",
     effects: [
-        { type: 'reputation', value: 2, message: "평판 +2"},
-        { type: 'currentStamina', value: 5, message: "현재 스태미나 +5"}
+        { type: 'reputation', value: 1, message: "평판 +1"}, // Reduced gain
+        { type: 'currentStamina', value: 3, message: "현재 스태미나 +3"} // Reduced gain
     ],
-  }
-];
-
-
-export const TRAINING_CAMPS: TrainingCamp[] = [
-  {
-    id: "strength_camp_1",
-    name: "고강도 근력 캠프",
-    description: "수 주간 근력 강화에 집중하여 펀치력을 극대화합니다. 다른 활동은 불가능합니다.",
-    cost: 300,
-    durationWeeks: 3,
-    effects: [{ stat: 'strength', value: 8 }, {stat: 'stamina', value: 5}],
-    reputationRequired: 50,
-  },
-  {
-    id: "speed_agility_camp_1",
-    name: "스피드 & 민첩성 특훈",
-    description: "반사신경과 발놀림을 극한까지 끌어올립니다. 캠프 기간 동안 다른 활동은 제한됩니다.",
-    cost: 400,
-    durationWeeks: 4,
-    effects: [{ stat: 'speed', value: 10 }, { stat: 'technique', value: 3 }],
-    reputationRequired: 100,
-  },
-  {
-    id: "iron_will_camp_1",
-    name: "강철의 의지 캠프",
-    description: "정신력과 맷집을 강화하여 더욱 견고한 복서로 거듭납니다. 이 기간에는 다른 훈련을 할 수 없습니다.",
-    cost: 500,
-    durationWeeks: 2,
-    effects: [{ stat: 'health', value: 15 }], // Max health increase
-    traitAwarded: "강철 맷집", // Example Trait: Reduces damage taken slightly or increases injury resistance
-    reputationRequired: 200,
-    // condition: (stats) => stats.rank === "프로" || stats.rank === "랭커", // Example: Only for Pro or Ranker
-  },
-   {
-    id: "all_around_conditioning_camp_1",
-    name: "종합 컨디셔닝 캠프",
-    description: "신체 모든 능력치를 전반적으로 향상시키는 균형 잡힌 고급 훈련 캠프입니다.",
-    cost: 750,
-    durationWeeks: 5,
-    effects: [
-      { stat: 'strength', value: 4 },
-      { stat: 'speed', value: 4 },
-      { stat: 'stamina', value: 10 }, // Max stamina
-      { stat: 'technique', value: 4 },
-    ],
-    reputationRequired: 300,
   }
 ];

@@ -8,8 +8,8 @@ import ActionButton from './components/ActionButton';
 import LogDisplay from './components/LogDisplay';
 import FightResultModal from './components/FightResultModal';
 import Sponsorships from './components/Sponsorships';
-import TrainingCampDisplay from './components/TrainingCampDisplay'; 
 import FightScreen from './components/FightScreen';
+import GameClearScreen from './components/GameClearScreen'; // New import
 
 const App: React.FC = () => {
   const {
@@ -18,8 +18,7 @@ const App: React.FC = () => {
     fightResult, isModalOpen, closeFightModal, modalTitle, modalRewards, fightLogForModal,
     chartData, getAvailableOpponents, handleRestart,
     handleSignSponsorship, availableSponsorships, currentNewsMessage,
-    availableTrainingCamps, activeTrainingCamp, trainingCampWeeksRemaining, startTrainingCamp,
-    isAutoPilotEnabled, toggleAutoPilot, // New state and function for auto-pilot
+    isAutoPilotEnabled, toggleAutoPilot,
   } = useGameLogic();
 
   const [tempPlayerName, setTempPlayerName] = useState("");
@@ -37,7 +36,7 @@ const App: React.FC = () => {
   };
 
   const opponentsToDisplay = getAvailableOpponents();
-  const isPlayerBusyInMenu = gamePhase === GamePhase.IN_TRAINING_CAMP || gamePhase !== GamePhase.MENU;
+  const isPlayerBusyInMenu = gamePhase !== GamePhase.MENU;
 
 
   if (gamePhase === GamePhase.PLAYER_SETUP) {
@@ -74,12 +73,24 @@ const App: React.FC = () => {
           <p className="mb-1">최종 랭크: {playerStats.rank}</p>
           <p className="mb-1">최종 명성: {playerStats.reputation}</p>
           {playerStats.traits.length > 0 && <p className="mb-1">획득 특성: {playerStats.traits.join(', ')}</p>}
-          <p className="mb-6">캠프 참가 횟수: {logs.filter(log => log.type === 'camp' && log.message.includes("참가!")).length}회</p>
+          <p className="mb-6">총 {gameWeek-1}주 동안 활동했습니다.</p>
           <ActionButton onClick={handleRestart} className="bg-sky-600 hover:bg-sky-700">
             새 게임 시작
           </ActionButton>
         </div>
       </div>
+    );
+  }
+  
+  if (gamePhase === GamePhase.GAME_CLEAR) {
+    const totalSponsorships = playerStats.activeSponsorships.length + playerStats.completedSponsorshipIds.length;
+    return (
+      <GameClearScreen
+        playerStats={playerStats}
+        gameWeek={gameWeek}
+        totalSponsorships={totalSponsorships}
+        onRestart={handleRestart}
+      />
     );
   }
 
@@ -159,13 +170,7 @@ const App: React.FC = () => {
         
         <section className="md:col-span-2 bg-slate-800 p-4 rounded-lg shadow-lg">
           <h2 className="text-2xl font-semibold text-sky-400 mb-3 border-b border-slate-700 pb-2">활동 선택</h2>
-          { gamePhase === GamePhase.IN_TRAINING_CAMP && activeTrainingCamp && (
-            <div className="mb-4 p-3 bg-sky-700/30 rounded-md text-center">
-                <p className="font-semibold text-lg text-sky-300">{activeTrainingCamp.name} 훈련 캠프 진행 중...</p>
-                <p className="text-sm text-slate-300">{trainingCampWeeksRemaining}주 남음. 캠프 완료 시까지 다른 활동 불가.</p>
-            </div>
-          )}
-          {isAutoPilotEnabled && gamePhase === GamePhase.MENU && !activeTrainingCamp && (
+          {isAutoPilotEnabled && gamePhase === GamePhase.MENU && ( 
             <div className="mb-4 p-3 bg-green-700/30 rounded-md text-center">
                 <p className="font-semibold text-lg text-green-300 animate-pulse">자동 진행 모드 활성 중...</p>
                 <p className="text-sm text-slate-300">CPU가 다음 행동을 결정하고 있습니다.</p>
@@ -226,19 +231,6 @@ const App: React.FC = () => {
             />
           </div>
           
-          <div className="mt-6">
-            <TrainingCampDisplay
-              availableCamps={availableTrainingCamps}
-              activeCamp={activeTrainingCamp}
-              weeksRemaining={trainingCampWeeksRemaining}
-              onStartCamp={startTrainingCamp}
-              playerFunds={playerStats.funds}
-              playerReputation={playerStats.reputation}
-              playerStats={playerStats} 
-              isPlayerBusy={isPlayerBusyInMenu || isAutoPilotEnabled}
-            />
-          </div>
-
         </section>
 
         <section className="md:col-span-3"> 
@@ -258,7 +250,7 @@ const App: React.FC = () => {
           <ActionButton onClick={handleRestart} className="bg-red-600 hover:bg-red-700 mr-4">
             게임 재시작
           </ActionButton>
-          <p className="text-xs text-slate-500 mt-4">챔피언 메이커 v1.8.1</p>
+          <p className="text-xs text-slate-500 mt-4">챔피언 메이커 v1.10.1</p>
       </footer>
     </div>
   );

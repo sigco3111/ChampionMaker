@@ -1,3 +1,4 @@
+
 export interface PlayerStats {
   playerName: string; // 선수 이름
   strength: number; // 힘
@@ -52,8 +53,9 @@ export interface TrainingOption {
 export interface LogEntry {
   id: string;
   message: string;
-  type: "info" | "success" | "error" | "fight" | "finance" | "news" | "camp";
+  type: "info" | "success" | "error" | "fight" | "finance" | "news";
   week: number;
+  important?: boolean; // Optional flag for game clear messages etc.
 }
 
 export enum GamePhase {
@@ -64,7 +66,7 @@ export enum GamePhase {
   FIGHTING = "FIGHTING",
   FIGHT_RESULT = "FIGHT_RESULT",
   GAME_OVER = "GAME_OVER",
-  IN_TRAINING_CAMP = "IN_TRAINING_CAMP", // Player is in a special training camp
+  GAME_CLEAR = "GAME_CLEAR", // Player has beaten the game
 }
 
 export const STAT_NAMES_KOREAN: Record<keyof Omit<PlayerStats, 'wins' | 'losses' | 'rank' | 'currentStamina' | 'currentHealth' | 'playerName' | 'reputation' | 'funds' | 'activeSponsorships' | 'completedSponsorshipIds' | 'traits'>, string> = {
@@ -97,7 +99,7 @@ export interface ActiveSponsorship extends Sponsorship {
 }
 
 // News/Events Feature
-export type NewsEffectType = 'reputation' | 'funds' | 'currentHealth' | 'currentStamina' | 'strength' | 'speed' | 'technique' | 'stamina';
+export type NewsEffectType = 'reputation' | 'funds' | 'currentHealth' | 'currentStamina' | 'strength' | 'speed' | 'technique' | 'stamina' | 'health';
 
 export interface GameNewsEventEffect {
   type: NewsEffectType;
@@ -110,24 +112,6 @@ export interface GameNewsEvent {
   logMessage?: string; // Optional: More detailed message for the game log
   effects?: GameNewsEventEffect[];
   condition?: (playerStats: PlayerStats, gameWeek: number) => boolean;
-}
-
-// Training Camp Feature
-export interface TrainingCampEffect {
-  stat: keyof Omit<PlayerStats, 'wins' | 'losses' | 'rank' | 'playerName' | 'reputation' | 'funds' | 'activeSponsorships' | 'completedSponsorshipIds' | 'currentHealth' | 'currentStamina' | 'traits'>;
-  value: number;
-}
-
-export interface TrainingCamp {
-  id: string;
-  name: string;
-  description: string;
-  cost: number;
-  durationWeeks: number;
-  effects: TrainingCampEffect[];
-  traitAwarded?: string; // e.g., "Iron Jaw"
-  reputationRequired?: number;
-  // condition?: (playerStats: PlayerStats) => boolean; // Example: player rank must be 'Pro'
 }
 
 // Fight System Specific Types
@@ -162,12 +146,10 @@ export interface CurrentFightState {
   opponentFightHealth: number;
   opponentFightStamina: number;
   currentRound: number;
-  // eventsForCurrentStep: FightEvent[]; // Events calculated for the current round/step, to be consumed by UI
-  // displayedEvents: FightEvent[]; // Events that have been shown in the UI for the current fight
-  roundLog: FightEvent[]; // Log of events for the current processing step by UI
-  fullFightTranscript: FightEvent[]; // Complete log of all displayed events in the fight
+  roundLog: FightEvent[]; 
+  fullFightTranscript: FightEvent[]; 
   isFightOver: boolean;
   winner: 'player' | 'opponent' | null;
-  isProcessingRoundEvents: boolean; // True if hook is calculating next round's events
-  uiReadyForNextEvent: boolean; // True if UI has processed previous event and is ready for next
+  isProcessingRoundEvents: boolean; 
+  uiReadyForNextEvent: boolean; 
 }
